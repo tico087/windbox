@@ -1,0 +1,129 @@
+
+services:
+  mariadb:
+    image: mariadb
+    container_name: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: 123
+      MYSQL_DATABASE: mariadb_modular_env_1
+    networks:
+      - gato-net
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mariaDB/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
+
+  postgres:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: 123
+      POSTGRES_DB: postgres_modular_env_1
+    networks:
+      - gato-net
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres/postgres-init.sql:/docker-entrypoint-initdb.d/postgres-init.sql
+
+  node:
+    image: node:latest
+    container_name: node
+    networks:
+      - gato-net
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./node:/home/node/app
+    depends_on:
+      - mariadb
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_USER: root
+      MYSQL_PASSWORD: 123
+      MYSQL_DATABASE: modular_env_1
+    working_dir: /home/node/app
+    command: ["npm", "start"]
+
+  vue-node:
+    image: node:14-slim
+    container_name: vue-node
+    networks:
+      - gato-net
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./vue/frontend-node:/usr/src/app
+    depends_on:
+      - node
+    environment:
+      NODE_ENV: development
+    working_dir: /usr/src/app
+    command: ["sh", "-c", "npm install && npm run serve"]
+
+  vue-laravel:
+    image: node:14-slim
+    container_name: vue-laravel
+    networks:
+      - gato-net
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./vue/frontend-laravel:/usr/src/app
+    depends_on:
+      - laravel
+    environment:
+      NODE_ENV: development
+    working_dir: /usr/src/app
+    command: ["sh", "-c", "npm install && npm run serve"]
+
+  laravel:
+    image: bitnami/laravel:10-debian-11
+    container_name: laravel
+    networks:
+      - gato-net
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./laravel:/var/www
+    depends_on:
+      - mariadb
+    environment:
+      DB_HOST: mariadb
+      DB_DATABASE: modular_env_1
+      DB_USERNAME: root
+      DB_PASSWORD: 123
+    working_dir: /var/www
+    command: ["sh", "-c", "composer install && php artisan key:generate && php artisan migrate && php artisan serve --host=0.0.0.0 --port=8000"]
+
+  php-windbox:
+    image: php:8.1-fpm 
+    container_name: php-windbox
+    networks:
+      - gato-net
+    volumes:
+      - ./php-windbox:/var/www/html 
+    working_dir: /var/www/html 
+    depends_on:
+      - mariadb 
+
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    ports:
+      - "80:80"
+    networks:
+      - gato-net
+    depends_on:
+      - node
+      - vue-node
+      - laravel
+      - php-windbox 
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf 
+
+networks:
+  gato-net:
+    driver: bridge
