@@ -117,9 +117,9 @@ services:
     networks:
       - gato-net
     depends_on:
-      - node
-      - vue-node
-      - laravel
+      # - node
+      # - vue-node
+      # - laravel
       - php-windbox 
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf 
