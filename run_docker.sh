@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ "$#" -eq 0 ]; then
-    services="mariadb  nginx php-windbox"
+    services="mariadb  nginx php"
 else
     services="$@"
 fi

@@ -1,0 +1,29 @@
+[
+    {
+        "id": 1,
+        "location": "WindFarm A",
+        "wind_speed_kph": 35.5,
+        "volume_m3": 1000,
+        "quality_rating": "C",
+        "stored_at": "2025-06-14T19:18:40+00:00",
+        "expires_at": "2026-05-31T00:00:00+00:00"
+    },
+    {
+        "id": 2,
+        "location": "WindFarmB",
+        "wind_speed_kph": 35.5,
+        "volume_m3": 1000,
+        "quality_rating": "C",
+        "stored_at": "2025-06-14T19:21:23+00:00",
+        "expires_at": "2026-05-31T00:00:00+00:00"
+    },
+    {
+        "id": 3,
+        "location": "WindFarmC",
+        "wind_speed_kph": 35.5,
+        "volume_m3": 1000,
+        "quality_rating": "C",
+        "stored_at": "2025-06-14T19:27:25+00:00",
+        "expires_at": "2026-05-31T00:00:00+00:00"
+    }
+]
