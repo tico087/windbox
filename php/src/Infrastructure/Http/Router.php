@@ -109,9 +109,20 @@ class Router
         } catch (InsufficientWindException | WindPacketNotFoundException $e) { 
             return $response->json(['error' => $e->getMessage()], $e->getCode());
         } catch (Exception $e) {
-            // Log the error in a real application
             error_log($e->getMessage() . " on " . $e->getFile() . ":" . $e->getLine() . "\n" . $e->getTraceAsString());
-            return $response->json(['error' => 'Internal Server Error'], 500);
+
+            if ($_ENV['APP_DEBUG'] === 'true') {
+                return $response->json([
+                    'error' => 'Internal Server Error',
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => explode("\n", $e->getTraceAsString())
+                ], 500);
+            } else {
+
+                return $response->json(['error' => 'Internal Server Error'], 500);
+            }
         }
 
         return $response->json(['error' => 'Route action not supported.'], 500);
