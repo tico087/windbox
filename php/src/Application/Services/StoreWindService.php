@@ -19,7 +19,7 @@ class StoreWindService
     public function execute(StoreWindCommand $command): WindPacket
     {
         $windPacket = new WindPacket(
-            null, // ID é nulo na criação; será definido pela persistência
+            null,
             $command->location,
             $command->windSpeedKph,
             $command->volumeM3,

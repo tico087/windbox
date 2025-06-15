@@ -2,19 +2,88 @@
 
 namespace WindBox\Infrastructure\DependenceInjection;
 
-use Psr\Container\ContainerInterface; // Interface PSR-11
+use Psr\Container\ContainerInterface;
 use ReflectionClass;
+use ReflectionException;
 use Exception;
+
+// Importações de serviços e entidades do seu domínio/aplicação
+use WindBox\Application\Services\AllocateWindService;
+use WindBox\Application\Services\GetAvailableWindService;
+use WindBox\Application\Services\StoreWindService;
+use WindBox\Domain\Services\WindStorageManager;
+
+// Importações de portas (interfaces)
+use WindBox\Domain\Ports\WindPacketRepository;
+// IMPORTAÇÃO CORRIGIDA/ADICIONADA: A interface WindStorageService precisa ser importada para o binding
+use WindBox\Domain\Ports\WindStorageService;
+
+// Importações de adaptadores de infraestrutura
+use WindBox\Infrastructure\Persistence\Database\PdoWindPacketRepository;
+use WindBox\Infrastructure\Persistence\DatabaseConnection;
+
+// IMPORTAÇÃO CORRIGIDA: Ajuste o namespace do seu controlador conforme a estrutura do seu projeto
+// Pelo seu tree, o namespace correto para WindStockController deve ser WindBox\Infrastructure\Http\Controllers
+use WindBox\Infrastructure\Http\Controllers\WindStockController;
+
+use PDO; // Importação da classe PDO
 
 class Container implements ContainerInterface
 {
     protected array $bindings = [];
     protected array $instances = [];
 
+    public function __construct()
+    {
+        $this->registerServiceDefinitions();
+    }
+
+    protected function registerServiceDefinitions(): void
+    {
+
+        $databaseConfig = require __DIR__ . '/../../../config/database.php';
+
+
+        $this->singleton(DatabaseConnection::class, function () use ($databaseConfig) {
+            return new DatabaseConnection($databaseConfig);
+        });
+
+
+        $this->singleton(PDO::class, function (ContainerInterface $c) {
+            return $c->get(DatabaseConnection::class)->connect();
+        });
+
+        $this->singleton(WindPacketRepository::class, PdoWindPacketRepository::class);
+
+
+        $this->singleton(PdoWindPacketRepository::class, function (ContainerInterface $c) {
+            return new PdoWindPacketRepository($c->get(PDO::class));
+        });
+
+
+        $this->singleton(WindStorageService::class, WindStorageManager::class);
+
+
+        $this->singleton(WindStorageManager::class, function (ContainerInterface $c) {
+            return new WindStorageManager(
+
+                $c->get(WindPacketRepository::class)
+            );
+        });
+
+
+        $this->singleton(AllocateWindService::class);
+        $this->singleton(StoreWindService::class);
+        $this->singleton(GetAvailableWindService::class);
+
+
+        $this->singleton(WindStockController::class);
+    }
+
     public function bind(string $abstract, $concrete = null, bool $shared = false): void
     {
         if (is_null($concrete)) {
-            $concrete = $abstract; // Assume concrete class name is same as abstract
+            $concrete = $abstract;
         }
         $this->bindings[$abstract] = compact('concrete', 'shared');
     }
@@ -35,7 +104,12 @@ class Container implements ContainerInterface
         if ($concrete instanceof \Closure) {
             $object = $concrete($this, $parameters);
         } elseif (is_string($concrete)) {
-            $reflector = new ReflectionClass($concrete);
+            try {
+                $reflector = new ReflectionClass($concrete);
+            } catch (ReflectionException $e) {
+                throw new Exception("Class {$concrete} does not exist: " . $e->getMessage(), 0, $e);
+            }
+
             if (!$reflector->isInstantiable()) {
                 throw new Exception("Class {$concrete} is not instantiable.");
             }
@@ -58,22 +132,25 @@ class Container implements ContainerInterface
         return $object;
     }
 
+
     protected function getDependencies(array $parameters, array $primitives = []): array
     {
         $dependencies = [];
         foreach ($parameters as $parameter) {
-            $dependency = $parameter->getType() && !$parameter->getType()->isBuiltin()
-                          ? $parameter->getType()->getName()
-                          : null;
+            $type = $parameter->getType();
 
             if (array_key_exists($parameter->getName(), $primitives)) {
                 $dependencies[] = $primitives[$parameter->getName()];
-            } elseif (is_string($dependency) && $this->has($dependency)) {
-                $dependencies[] = $this->make($dependency);
+            } elseif ($type instanceof \ReflectionNamedType && !$type->isBuiltin() && $this->has($type->getName())) {
+                $dependencies[] = $this->make($type->getName());
             } elseif ($parameter->isDefaultValueAvailable()) {
                 $dependencies[] = $parameter->getDefaultValue();
+            } elseif ($type instanceof \ReflectionNamedType && $type->allowsNull() && !$parameter->isDefaultValueAvailable()) {
+                $dependencies[] = null;
             } else {
-                throw new Exception("Cannot resolve dependency {$parameter->getName()} for class {$dependency}");
+                $declaringClass = $parameter->getDeclaringClass() ? $parameter->getDeclaringClass()->getName() : 'unknown class';
+                $dependencyName = $type instanceof \ReflectionNamedType ? $type->getName() : $parameter->getName();
+                throw new Exception("Cannot resolve dependency [{$parameter->getName()}] (Type: {$dependencyName}) for class [{$declaringClass}].");
             }
         }
         return $dependencies;

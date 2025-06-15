@@ -32,7 +32,7 @@ class WindPacket
         $this->expiresAt = $expiresAt;
     }
 
-    // Getters para acessar as propriedades
+
     public function getId(): ?int { return $this->id; }
     public function getLocation(): string { return $this->location; }
     public function getWindSpeedKph(): float { return $this->windSpeedKph; }
@@ -41,9 +41,12 @@ class WindPacket
     public function getStoredAt(): Carbon { return $this->storedAt; }
     public function getExpiresAt(): ?Carbon { return $this->expiresAt; }
 
-    // Setters (se necessário para a lógica de domínio, ou métodos de atualização)
+
     public function setVolumeM3(float $volumeM3): void { $this->volumeM3 = $volumeM3; }
-    public function setId(int $id): void { $this->id = $id; } // Usado pela camada de persistência
+    public function setId(int $id): void
+    {
+        $this->id = $id;
+    }
 
     public function isExpired(): bool
     {

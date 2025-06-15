@@ -5,12 +5,13 @@ services:
     container_name: mariadb
     environment:
       MYSQL_ROOT_PASSWORD: 123
-      MYSQL_DATABASE: mariadb_modular_env_1
+      MYSQL_DATABASE: windbox_db
     networks:
       - gato-net
     ports:
       - "3306:3306"
     volumes:
+      - mariadb_data:/var/lib/mysql
       - ./mariaDB/mysql-init.sql:/docker-entrypoint-initdb.d/mysql-init.sql
 
   laravel:
@@ -26,22 +27,26 @@ services:
       - mariadb
     environment:
       DB_HOST: mariadb
-      DB_DATABASE: modular_env_1
+      DB_DATABASE: windbox_db
       DB_USERNAME: root
       DB_PASSWORD: 123
     working_dir: /var/www
     command: ["sh", "-c", "composer install && php artisan key:generate && php artisan migrate && php artisan serve --host=0.0.0.0 --port=8000"]
 
   php:
-    image: php:8.1-fpm 
+  
+    build:
+      context: ./php
+      dockerfile: Dockerfile
     container_name: php
     networks:
       - gato-net
     volumes:
-      - ./php:/var/www/html 
-    working_dir: /var/www/html 
+      - ./php:/var/www/html
+    working_dir: /var/www/html
     depends_on:
-      - mariadb 
+      - mariadb
+    # command: ["sh", "-c", "composer install && php-fpm"] # Para instalar as dependências do Composer no startup do container
 
 
   nginx:
@@ -59,3 +64,7 @@ services:
 networks:
   gato-net:
     driver: bridge
+
+
+volumes:
+  mariadb_data:
